@@ -1,16 +1,29 @@
 import Head from 'next/head'
+import { useState } from 'react'
 import { useSession, signIn, signOut } from "next-auth/react"
 import { FaGoogle } from 'react-icons/fa'
+import { db } from '@/firebase.config'
+import { collection, addDoc, serverTimestamp } from "firebase/firestore"
 
 export default function Home() {
+  const [loading, setLoading] = useState(false)
   const { data: session } = useSession()
-  console.log('session:', session)
-  console.log('user:', session?.user)
 
   const handleSignIn = async () => {
-    await signIn('google')
+    setLoading(true)
 
-    // add signed in user to firestore database
+    try {
+      await signIn('google')
+
+      await addDoc(collection(db, 'users'), {
+        name: session?.user?.name,
+        email: session?.user?.email,
+        image: session?.user?.image,
+        createdAt: serverTimestamp()
+      })
+    } catch (error) {
+      console.log(error)
+    }
   }
 
   return (
@@ -33,10 +46,18 @@ export default function Home() {
               // onClick={() => signIn('google')}
               onClick={handleSignIn}
             >
-              <span className='text-white'>
-                Sign In with Google
-              </span>
-              <FaGoogle className='text-white' />
+              {!loading ? (
+                <>
+                  <span className='text-white'>
+                    Sign In with Google
+                  </span>
+                  <FaGoogle className='text-white' />
+                </>
+              ) : (
+                <span className='text-black'>
+                  Loading...
+                </span>
+              )}
             </button>
           </>
         ) : (
